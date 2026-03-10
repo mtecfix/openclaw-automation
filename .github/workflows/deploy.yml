@@ -24,8 +24,8 @@ jobs:
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
           
           # Deploy agent
-          scp agent/deepseek_agent.py ubuntu@$SERVER_IP:/tmp/
-          ssh ubuntu@$SERVER_IP "sudo mv /tmp/deepseek_agent.py /usr/local/bin/ && sudo chmod +x /usr/local/bin/deepseek_agent.py"
+          scp -i ~/.ssh/id_rsa agent/deepseek_agent.py ubuntu@$SERVER_IP:/tmp/
+          ssh -i ~/.ssh/id_rsa ubuntu@$SERVER_IP "sudo mv /tmp/deepseek_agent.py /usr/local/bin/ && sudo chmod +x /usr/local/bin/deepseek_agent.py"
           
           echo "✅ Agent deployed to OpenClaw server"
       
