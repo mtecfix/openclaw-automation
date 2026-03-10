@@ -1,0 +1,50 @@
+name: Deploy to OpenClaw
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy agent to OpenClaw server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+          
+          # Deploy agent
+          scp agent/deepseek_agent.py ubuntu@$SERVER_IP:/tmp/
+          ssh ubuntu@$SERVER_IP "sudo mv /tmp/deepseek_agent.py /usr/local/bin/ && sudo chmod +x /usr/local/bin/deepseek_agent.py"
+          
+          echo "✅ Agent deployed to OpenClaw server"
+      
+      - name: Deploy Lambda functions
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+        run: |
+          # Package and deploy each Lambda function
+          cd lambda
+          
+          for func in upload_to_s3 invalidate_cloudfront get_cloudwatch_metrics send_email process_form_submission; do
+            echo "Deploying openclaw-${func}..."
+            zip ${func}.zip ${func}.py
+            aws lambda update-function-code \
+              --function-name openclaw-${func} \
+              --zip-file fileb://${func}.zip \
+              --region $AWS_REGION
+          done
+          
+          echo "✅ All Lambda functions deployed"
