@@ -38,12 +38,21 @@ jobs:
           # Package and deploy each Lambda function
           cd lambda
           
-          for func in upload_to_s3 invalidate_cloudfront get_cloudwatch_metrics send_email process_form_submission; do
-            echo "Deploying openclaw-${func}..."
-            zip ${func}.zip ${func}.py
+          # Map file names to function names
+          declare -A funcs
+          funcs[upload_to_s3]="openclaw-upload-to-s3"
+          funcs[invalidate_cloudfront]="openclaw-invalidate-cloudfront"
+          funcs[get_cloudwatch_metrics]="openclaw-get-cloudwatch-metrics"
+          funcs[send_email]="openclaw-send-email"
+          funcs[process_form_submission]="openclaw-process-form"
+          
+          for file in upload_to_s3 invalidate_cloudfront get_cloudwatch_metrics send_email process_form_submission; do
+            func_name="${funcs[$file]}"
+            echo "Deploying ${func_name}..."
+            zip ${file}.zip ${file}.py
             aws lambda update-function-code \
-              --function-name openclaw-${func} \
-              --zip-file fileb://${func}.zip \
+              --function-name ${func_name} \
+              --zip-file fileb://${file}.zip \
               --region $AWS_REGION
           done
           
